@@ -3,250 +3,169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HookGen AI — Video Hook Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>ToolVault Firebase</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <style>
-body{
-  font-family:Inter,system-ui;
-  background:#f5f5f5;
-  margin:0;
-  padding:30px;
-  color:#111;
+:root{
+  --bg:#0b1220;
+  --card:#111a2e;
+  --text:#fff;
+  --grad:linear-gradient(135deg,#22c55e,#06b6d4);
 }
+.light{
+  --bg:#f3f6fb;
+  --card:#fff;
+  --text:#0b1220;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins,sans-serif}
+body{background:var(--bg);color:var(--text);transition:.3s}
 
+/* header */
+header{display:flex;justify-content:space-between;padding:20px 40px}
+.logo{font-size:24px;font-weight:700;background:var(--grad);-webkit-background-clip:text;color:transparent}
+.btn{padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+.primary{background:var(--grad);color:#fff}
+
+/* grid */
 .container{
-  max-width:900px;
-  margin:auto;
+  max-width:1100px;margin:auto;padding:40px 20px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;
 }
 
+/* card */
 .card{
-  background:#fff;
-  padding:24px;
-  border-radius:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-  margin-bottom:20px;
+  background:rgba(255,255,255,.05);
+  padding:22px;border-radius:18px;transition:.3s;
 }
+.card:hover{transform:translateY(-8px)}
+.price{float:right;background:var(--grad);padding:4px 10px;border-radius:999px;font-size:12px}
+.open{display:block;margin-top:15px;background:var(--grad);padding:10px;border-radius:10px;text-align:center;color:#fff;text-decoration:none}
 
-h1{
-  text-align:center;
-  margin-bottom:6px;
+/* modal */
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center;
 }
-
-.sub{
-  text-align:center;
-  color:#666;
-  margin-bottom:24px;
+.modal-box{
+  background:var(--card);padding:25px;border-radius:14px;width:300px;
 }
-
-.drop{
-  border:2px dashed #ccc;
-  padding:40px;
-  text-align:center;
-  border-radius:16px;
-  cursor:pointer;
-}
-
-.drop:hover{
-  border-color:#059669;
-  background:#f0fdf4;
-}
-
-button{
-  background:#111;
-  color:#fff;
-  border:none;
-  padding:14px 18px;
-  border-radius:12px;
-  font-weight:700;
-  cursor:pointer;
-  width:100%;
-}
-
-button:hover{
-  background:#333;
-}
-
-.result{
-  background:#f9fafb;
-  padding:14px;
-  border-radius:12px;
-  margin-bottom:10px;
-}
-
-.tag{
-  display:inline-block;
-  background:#ecfdf5;
-  color:#047857;
-  padding:6px 12px;
-  border-radius:999px;
-  margin:4px;
-  font-weight:600;
-}
-
-input{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #ddd;
-  margin-bottom:12px;
-}
-
-video{
-  width:100%;
-  border-radius:14px;
-  margin-top:10px;
-}
-
-.loading{
-  text-align:center;
-  font-weight:700;
-  color:#059669;
+.modal input{
+  width:100%;padding:10px;margin:8px 0;border-radius:8px;border:none;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
 
-<div class="card">
-<h1>🚀 HookGen AI</h1>
-<p class="sub">Upload video → AI generates viral hooks</p>
+<header>
+  <div class="logo">🚀 ToolVault</div>
+  <div>
+    <button class="btn" onclick="toggleTheme()">🌙</button>
+    <button class="btn primary" onclick="openModal()">Login</button>
+    <button class="btn" id="logoutBtn" style="display:none" onclick="logout()">Logout</button>
+  </div>
+</header>
 
-<input id="apiKey" placeholder="Paste Gemini API Key (AIza…)" />
+<div style="text-align:center;margin-top:10px" id="userEmail"></div>
 
-<div class="drop" onclick="fileInput.click()">
-📤 Click to upload video
-<input type="file" id="fileInput" hidden accept="video/*">
-</div>
+<section class="container">
 
-<video id="video" controls style="display:none"></video>
+  <div class="card">
+    <div class="price">₹199</div>
+    <h3>AI Video Downloader</h3>
+    <p>Download videos instantly.</p>
+    <a href="#" class="open" onclick="checkAccess(event)">Open Tool</a>
+  </div>
 
-<br>
-<button onclick="analyze()">Analyze Video</button>
-</div>
+  <div class="card">
+    <div class="price">₹149</div>
+    <h3>AI Caption Generator</h3>
+    <p>Generate viral captions.</p>
+    <a href="#" class="open" onclick="checkAccess(event)">Open Tool</a>
+  </div>
 
-<div class="card">
-<h3>🔥 Results</h3>
-<div id="loading" class="loading" style="display:none">
-Gemini is analyzing…
-</div>
+</section>
 
-<div id="results"></div>
-</div>
-
+<!-- LOGIN MODAL -->
+<div class="modal" id="authModal">
+  <div class="modal-box">
+    <h3>Login / Signup</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button class="btn primary" style="width:100%" onclick="login()">Login</button>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="signup()">Signup</button>
+  </div>
 </div>
 
 <script>
-let file = null;
-
-// upload
-fileInput.onchange = e=>{
-  file = e.target.files[0];
-  if(!file) return;
-
-  video.src = URL.createObjectURL(file);
-  video.style.display = "block";
+// 🔥 PASTE YOUR FIREBASE CONFIG HERE
+const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 };
 
-// extract thumbnail
-async function extractFrame(file){
-  return new Promise((resolve,reject)=>{
-    const v=document.createElement("video");
-    v.src=URL.createObjectURL(file);
-    v.muted=true;
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 
-    v.onloadeddata=()=>{
-      const c=document.createElement("canvas");
-      c.width=v.videoWidth;
-      c.height=v.videoHeight;
-      c.getContext("2d").drawImage(v,0,0);
-
-      const base64=c.toDataURL("image/jpeg",0.8).split(",")[1];
-      resolve(base64);
-    };
-
-    v.onerror=reject;
-  });
+/* theme */
+function toggleTheme(){
+  document.body.classList.toggle("light");
 }
 
-// main analyze
-async function analyze(){
-  const key=apiKey.value.trim();
-
-  if(!key){
-    alert("Add API key");
-    return;
-  }
-
-  if(!file){
-    alert("Upload video first");
-    return;
-  }
-
-  loading.style.display="block";
-  results.innerHTML="";
-
-  try{
-    const frame=await extractFrame(file);
-
-    const resp=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
-      {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          contents:[{
-            parts:[
-              {
-                inline_data:{
-                  mime_type:"image/jpeg",
-                  data:frame
-                }
-              },
-              {
-                text:`Generate exactly 5 viral hook captions and 5 hashtags.
-Return ONLY JSON:
-{"titles":["t1","t2","t3","t4","t5"],"hashtags":["h1","h2","h3","h4","h5"]}`
-              }
-            ]
-          }]
-        })
-      }
-    );
-
-    const data=await resp.json();
-    const text=data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    const clean=text.replace(/```json|```/g,"").trim();
-    const json=JSON.parse(clean);
-
-    render(json);
-
-  }catch(err){
-    console.error(err);
-    results.innerHTML="<p style='color:red'>❌ Error analyzing video</p>";
-  }
-
-  loading.style.display="none";
+/* modal */
+function openModal(){
+  authModal.style.display="flex";
+}
+window.onclick=e=>{
+  if(e.target.id==="authModal") authModal.style.display="none";
 }
 
-// render results
-function render(data){
-  let html="";
+/* signup */
+function signup(){
+  auth.createUserWithEmailAndPassword(email.value,password.value)
+  .then(()=>alert("Signup success"))
+  .catch(e=>alert(e.message));
+}
 
-  html+="<h4>🎬 Hook Captions</h4>";
-  data.titles.forEach(t=>{
-    html+=`<div class="result">${t}</div>`;
-  });
+/* login */
+function login(){
+  auth.signInWithEmailAndPassword(email.value,password.value)
+  .then(()=>authModal.style.display="none")
+  .catch(e=>alert(e.message));
+}
 
-  html+="<h4>🏷 Hashtags</h4>";
-  data.hashtags.forEach(h=>{
-    html+=`<span class="tag">#${h.replace("#","")}</span>`;
-  });
+/* logout */
+function logout(){
+  auth.signOut();
+}
 
-  results.innerHTML=html;
+/* auth state */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    userEmail.innerText="Logged in: "+user.email;
+    logoutBtn.style.display="inline-block";
+  }else{
+    userEmail.innerText="";
+    logoutBtn.style.display="none";
+  }
+});
+
+/* tool lock */
+function checkAccess(e){
+  if(!auth.currentUser){
+    e.preventDefault();
+    openModal();
+    alert("Please login first");
+  }
 }
 </script>
+
 </body>
 </html>
