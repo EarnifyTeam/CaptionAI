@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HookGen AI — AI Bulk Video Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --emerald: #059669;
+      --emerald-dark: #047857;
+      --emerald-light: #ecfdf5;
+      --emerald-border: #a7f3d0;
+      --bg: #F5F5F5;
+      --card: #ffffff;
+      --text: #1A1A1A;
+      --muted: #6b7280;
+      --border: rgba(0,0,0,0.07);
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+      --radius: 20px;
+      --radius-xl: 28px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ───── NAV ───── */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--emerald); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { width: 20px; height: 20px; color: #fff; }
+    .logo span { font-weight: 800; font-size: 18px; color: var(--text); }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-icon {
+      padding: 8px; background: none; border: none; cursor: pointer;
+      border-radius: 50%; color: var(--muted);
+      transition: color 0.2s, background 0.2s;
+    }
+    .btn-icon:hover { color: var(--emerald); background: #f0fdf4; }
+    .btn-community {
+      display: flex; align-items: center; gap: 6px;
+      padding: 9px 18px;
+      background: var(--emerald); color: #fff;
+      border: none; border-radius: 50px;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+      box-shadow: 0 2px 12px rgba(5,150,105,0.3);
+    }
+    .btn-community:hover { background: var(--emerald-dark); transform: translateY(-1px); }
+
+    /* ───── MAIN LAYOUT ───── */
+    .container { flex: 1; padding: 32px 20px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    /* ───── HERO ───── */
+    .hero { text-align: center; margin-bottom: 44px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 50px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .hero p { color: var(--muted); max-width: 460px; margin: 0 auto; line-height: 1.6; font-size: 15px; }
+
+    /* ───── GRID ───── */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+    /* ───── DROPZONE ───── */
+    #dropzone {
+      border: 2.5px dashed #d1d5db;
+      border-radius: var(--radius-xl);
+      min-height: 400px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 40px 24px; text-align: center;
+      cursor: pointer; transition: all 0.25s;
+      background: var(--card);
+    }
+    #dropzone.drag-over { border-color: var(--emerald); background: var(--emerald-light); }
+    #dropzone.locked { border-color: #fcd34d; background: #fffbeb; cursor: not-allowed; }
+    .drop-icon {
+      width: 64px; height: 64px;
+      background: #f9fafb; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+    }
+    .drop-icon svg { width: 30px; height: 30px; color: #9ca3af; }
+    #dropzone h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    #dropzone p { font-size: 13px; color: var(--muted); }
+    #fileInput { display: none; }
+
+    /* ───── VIDEO PREVIEW ───── */
+    #previewSection { display: none; }
+    .video-main-wrap {
+      position: relative;
+      border-radius: var(--radius-xl); overflow: hidden;
+      background: #000;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    #mainVideo {
+      width: 100%; display: block;
+      aspect-ratio: 9/16; max-height: 480px;
+      object-fit: cover;
+    }
+    .btn-reset {
+      position: absolute; top: 12px; right: 12px;
+      padding: 8px; background: rgba(0,0,0,0.55);
+      border: none; border-radius: 50%; cursor: pointer; color: #fff;
+      backdrop-filter: blur(6px); transition: background 0.2s;
+    }
+    .btn-reset:hover { background: rgba(0,0,0,0.8); }
+    .thumbs {
+      display: flex; gap: 8px; overflow-x: auto;
+      padding-bottom: 4px; margin-top: 12px;
+      scrollbar-width: none;
+    }
+    .thumbs::-webkit-scrollbar { display: none; }
+    .thumb-btn {
+      flex-shrink: 0; width: 52px; height: 76px;
+      border-radius: 12px; overflow: hidden;
+      border: 2.5px solid transparent; cursor: pointer;
+      transition: all 0.2s; opacity: 0.6;
+      background: #000; padding: 0;
+    }
+    .thumb-btn.active { border-color: var(--emerald); opacity: 1; transform: scale(1.06); }
+    .thumb-btn:hover { opacity: 1; }
+    .thumb-btn video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb-add {
+      flex-shrink: 0; width: 52px; height: 76px;
+      border-radius: 12px; border: 2px dashed #d1d5db;
+      background: none; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .thumb-add:hover { background: #f9fafb; }
+
+    /* ───── ANALYZE BTN ───── */
+    #analyzeBtn {
+      width: 100%; padding: 16px;
+      background: var(--text); color: #fff;
+      border: none; border-radius: 16px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      display: none; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 16px; transition: background 0.2s, transform 0.15s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    #analyzeBtn:hover { background: #333; transform: translateY(-1px); }
+    #analyzeBtn.hidden { display: none !important; }
+
+    /* ───── RESULTS CARD ───── */
+    .results-card {
+      background: var(--card); border-radius: var(--radius-xl);
+      padding: 32px; border: 1px solid var(--border);
+      box-shadow: var(--shadow); min-height: 400px;
+      display: flex; flex-direction: column;
+    }
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .results-title {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 18px; font-weight: 800;
+    }
+    .analyzing-badge {
+      display: none; align-items: center; gap: 6px;
+      color: var(--emerald); font-size: 13px; font-weight: 600;
+    }
+    .analyzing-badge.visible { display: flex; }
+
+    /* ───── EMPTY / LOADING / ERROR ───── */
+    .state-center {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; gap: 14px; color: var(--muted);
+    }
+    .state-icon {
+      width: 60px; height: 60px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .spinner {
+      width: 54px; height: 54px; border-radius: 50%;
+      border: 4px solid #d1fae5;
+      border-top-color: var(--emerald);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ───── RESULT CONTENT ───── */
+    #resultContent { display: none; }
+    .section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.4px; color: #9ca3af;
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 12px;
+    }
+    .caption-item {
+      position: relative; padding: 14px 44px 14px 16px;
+      background: #f9fafb; border-radius: 14px;
+      border: 1px solid #e5e7eb; margin-bottom: 10px;
+      font-size: 14px; font-weight: 500; line-height: 1.5;
+      transition: border-color 0.2s, background 0.2s;
+      animation: fadeUp 0.3s ease both;
+    }
+    .caption-item:hover { border-color: var(--emerald-border); background: var(--emerald-light); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      padding: 6px; background: none; border: none;
+      cursor: pointer; color: #9ca3af; border-radius: 8px;
+      transition: color 0.2s;
+    }
+    .copy-btn:hover { color: var(--emerald); }
+    .copy-btn.copied { color: var(--emerald); }
+    .hashtags-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .hashtag {
+      padding: 7px 14px;
+      background: var(--emerald-light); color: var(--emerald-dark);
+      border-radius: 50px; font-size: 13px; font-weight: 700;
+      border: 1px solid var(--emerald-border);
+      animation: fadeUp 0.3s ease both;
+    }
+    .btn-copy-all {
+      width: 100%; padding: 12px;
+      border: 1.5px solid #e5e7eb; border-radius: 12px;
+      background: none; font-size: 13px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-copy-all:hover { background: #f9fafb; }
+
+    /* ───── PRO TIP ───── */
+    .pro-tip {
+      background: #064e3b; color: #fff;
+      border-radius: var(--radius-xl); padding: 24px 28px;
+      margin-top: 20px; position: relative; overflow: hidden;
+    }
+    .pro-tip::after {
+      content: ''; position: absolute;
+      bottom: -20px; right: -20px;
+      width: 100px; height: 100px;
+      background: rgba(255,255,255,0.07); border-radius: 50%;
+    }
+    .pro-tip h4 { font-weight: 800; margin-bottom: 6px; }
+    .pro-tip p { font-size: 13px; color: #a7f3d0; line-height: 1.6; }
+
+    /* ───── MODAL ───── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 28px;
+      width: 100%; max-width: 440px;
+      padding: 36px; position: relative;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.2);
+      animation: popIn 0.25s ease both;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.93) translateY(16px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      padding: 8px; background: #f3f4f6; border: none;
+      border-radius: 50%; cursor: pointer; color: #6b7280;
+      transition: background 0.2s;
+    }
+    .modal-close:hover { background: #e5e7eb; }
+    .modal h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+    .modal .sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    label.field-label {
+      display: block; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field-wrap { position: relative; }
+    .field-wrap input {
+      width: 100%; padding: 13px 44px 13px 14px;
+      border: 1.5px solid #e5e7eb; border-radius: 12px;
+      font-size: 14px; outline: none;
+      transition: border-color 0.2s;
+      font-family: monospace;
+    }
+    .field-wrap input:focus { border-color: var(--emerald); }
+    .field-toggle {
+      position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer; color: #9ca3af;
+    }
+    .field-hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .field-hint a { color: var(--emerald); }
+    .btn-save {
+      width: 100%; padding: 14px;
+      background: var(--emerald); color: #fff;
+      border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      margin-top: 20px; transition: background 0.2s;
+    }
+    .btn-save:hover { background: var(--emerald-dark); }
+    .key-status {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 50px;
+      font-size: 11px; font-weight: 700;
+    }
+    .key-status.ok { background: var(--emerald-light); color: var(--emerald-dark); }
+    .key-status.bad { background: #fef3c7; color: #92400e; }
+
+    /* ───── ABOUT MODAL ───── */
+    .about-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #818cf8, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; font-weight: 900; color: #fff;
+      margin: 0 auto 16px; border: 4px solid #fff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .about-bio {
+      background: #f9fafb; border-radius: 16px;
+      padding: 18px; font-size: 13px; color: #4b5563;
+      line-height: 1.7; margin-bottom: 20px;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* ───── TOAST ───── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: #fff;
+      padding: 10px 22px; border-radius: 50px;
+      font-size: 13px; font-weight: 600;
+      z-index: 500; opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ───── KEY REQUIRED ───── */
+    #keyRequired { display: none; }
+    .key-req-icon {
+      width: 64px; height: 64px;
+      background: #fffbeb; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+    }
+    .btn-configure {
+      display: flex; align-items: center; gap: 6px;
+      padding: 12px 22px;
+      background: #d97706; color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-configure:hover { background: #b45309; }
+
+    /* ───── API KEY BANNER ───── */
+    #apiBanner {
+      display: none;
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 12px; padding: 12px 16px;
+      font-size: 13px; color: #92400e;
+      margin-bottom: 20px;
+      align-items: center; gap: 8px;
+    }
+    #apiBanner a { color: #92400e; font-weight: 700; }
+    #apiBanner.visible { display: flex; }
+
+    /* ───── FOOTER ───── */
+    footer {
+      text-align: center; padding: 20px;
+      font-size: 12px; color: #9ca3af;
+      border-top: 1px solid var(--border);
+      background: #fff;
+    }
+    footer a { color: var(--emerald); text-decoration: none; }
+
+    svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+
+<!-- ─────────── NAV ─────────── -->
+<nav>
+  <div class="nav-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      </div>
+      <span>HookGen AI</span>
+    </a>
+    <div class="nav-actions">
+      <button class="btn-icon" onclick="openSettings()" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="btn-icon" onclick="openAbout()" title="About Developer">
+        <svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>
+      <a class="btn-community" href="https://whatsapp.com/channel/0029Vb7wKKo3mFY41pw96m3x" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Join Community
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ─────────── MAIN ─────────── -->
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      AI Bulk Video Analyzer
+    </div>
+    <h1>HookGen AI</h1>
+    <p>Upload up to 10 videos and let AI craft the perfect hook captions and hashtags for maximum social media reach.</p>
+  </div>
+
+  <!-- API Key Banner -->
+  <div id="apiBanner">
+    <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span>No API Key found. <a href="#" onclick="openSettings(); return false;">Add your Gemini API key</a> to start analyzing videos.</span>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid">
+
+    <!-- LEFT: Upload & Preview -->
+    <div>
+      <!-- Dropzone -->
+      <div id="dropzone" onclick="handleDropzoneClick()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <!-- Key Required State -->
+        <div id="keyRequired" style="display:none; flex-direction:column; align-items:center;">
+          <div class="key-req-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" style="color:#d97706"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          </div>
+          <h3>API Key Required</h3>
+          <p style="margin-bottom:20px">Add your Gemini API key in settings to start analyzing videos.</p>
+          <button class="btn-configure" onclick="openSettings(); event.stopPropagation();">
+            <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Configure Key
+          </button>
+        </div>
+        <!-- Normal Upload State -->
+        <div id="dropNormal">
+          <div class="drop-icon">
+            <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          </div>
+          <h3>Drop up to 10 videos here</h3>
+          <p>MP4, MOV, AVI, WebM &nbsp;·&nbsp; Max 50MB each</p>
+        </div>
+        <input type="file" id="fileInput" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm" multiple />
+      </div>
+
+      <!-- Preview Section -->
+      <div id="previewSection">
+        <div class="video-main-wrap">
+          <video id="mainVideo" controls playsinline></video>
+          <button class="btn-reset" onclick="resetAll()" title="Start over">
+            <svg width="18" height="18" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.69"/></svg>
+          </button>
+        </div>
+        <div class="thumbs" id="thumbsWrap"></div>
+      </div>
+
+      <!-- Analyze Button -->
+      <button id="analyzeBtn" onclick="analyzeVideos()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
+        <span id="analyzeBtnText">Analyze Videos</span>
+      </button>
+    </div>
+
+    <!-- RIGHT: Results -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      <div class="results-card">
+        <div class="results-header">
+          <div class="results-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" style="color:var(--emerald)"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+            Analysis Results
+            <span id="videoCounter" style="font-size:13px;font-weight:500;color:var(--muted);"></span>
+          </div>
+          <div class="analyzing-badge" id="analyzingBadge">
+            <div class="spinner" style="width:16px;height:16px;border-width:2px;"></div>
+            Analyzing...
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="state-center" id="emptyState">
+          <div class="state-icon" style="background:#f3f4f6;">
+            <svg width="28" height="28" viewBox="0 0 24 24" style="opacity:0.2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <p style="max-width:200px; font-size:14px;">Upload videos to see AI-generated hook captions and hashtags.</p>
+        </div>
+
+        <!-- Loading state -->
+        <div class="state-center" id="loadingState" style="display:none;">
+          <div class="spinner"></div>
+          <p id="loadingText" style="font-weight:600;">Gemini is watching your video…</p>
+          <p style="font-size:12px;">This usually takes 10–20 seconds</p>
+        </div>
+
+        <!-- Error state -->
+        <div class="state-center" id="errorState" style="display:none;">
+          <div class="state-icon" style="background:#fef2f2;">
+            <svg width="24" height="24" viewBox="0 0 24 24" style="color:#ef4444"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p id="errorMsg" style="color:#dc2626; font-weight:600;"></p>
+          <button onclick="analyzeVideos()" style="font-size:13px;font-weight:700;text-decoration:underline;background:none;border:none;cursor:pointer;">Try Again</button>
+        </div>
+
+        <!-- Result content -->
+        <div id="resultContent">
+          <div style="margin-bottom:24px;">
+            <p class="section-label">
+              <svg width="12" height="12" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              Hook Captions (Choose one)
+            </p>
+            <div id="captionsList"></div>
+          </div>
+          <div>
+            <p class="section-label">
+              <svg width="12" height="12" viewBox="0 0 24 24"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+              Related Hashtags
+            </p>
+            <div class="hashtags-wrap" id="hashtagsList"></div>
+            <button class="btn-copy-all" id="copyAllBtn" onclick="copyAllHashtags()">
+              <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy All Hashtags
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pro Tip -->
+      <div class="pro-tip">
+        <h4>💡 Pro Tip</h4>
+        <p>Short, high-energy videos (5–15s) perform best with AI analysis. Good lighting helps Gemini understand your content better for more accurate captions!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── FOOTER ─────────── -->
+<footer>
+  Made with ❤️ by <a href="#" onclick="openAbout(); return false;">Suraj Kumar</a> &nbsp;·&nbsp;
+  <a href="https://whatsapp.com/channel/0029Vb7wKKo3mFY41pw96m3x" target="_blank">Community</a>
+</footer>
+
+<!-- ─────────── SETTINGS MODAL ─────────── -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('settingsModal')">
+      <svg width="16" height="16" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <h2>⚙️ Settings</h2>
+    <p class="sub">Enter your Gemini API key to enable AI-powered video analysis.</p>
+    <form onsubmit="saveSettings(event)">
+      <label class="field-label" for="apiKeyInput">Gemini API Key</label>
+      <div class="field-wrap" style="margin-bottom:6px;">
+        <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off" />
+        <button type="button" class="field-toggle" onclick="toggleKeyVisibility()">
+          <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <p class="field-hint">
+        Get your free API key at
+        <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>
+      </p>
+      <div style="margin-top:16px; display:flex; align-items:center; gap:8px;">
+        <span>Status:</span>
+        <span class="key-status" id="keyStatusBadge">Checking…</span>
+      </div>
+      <button type="submit" class="btn-save">
+        <svg width="16" height="16" viewBox="0 0 24 24" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Key
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ─────────── ABOUT MODAL ─────────── -->
+<div class="modal-backdrop" id="aboutModal">
+  <div class="modal" style="text-align:center;">
+    <button class="modal-close" onclick="closeModal('aboutModal')">
+      <svg width="16" height="16" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="about-avatar">S</div>
+    <h2>Suraj Kumar</h2>
+    <p style="color:var(--emerald);font-weight:700;font-size:14px;margin-bottom:20px;">Professional Web Developer</p>
+    <div class="about-bio">
+      <p>I am Suraj Kumar, a web developer who created and developed <strong>SoraDown.In</strong> — a modern, user-friendly website built with creativity, simplicity, and performance in mind.</p>
+      <br/>
+      <p>I build fast, responsive, and professional websites for individuals, startups, and businesses. Whether you need a personal portfolio, business site, or web app — I've got you covered.</p>
+    </div>
+    <a class="btn-community" href="https://whatsapp.com/channel/0029Vb7wKKo3mFY41pw96m3x" target="_blank" rel="noopener" style="display:inline-flex;justify-content:center;">
+      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Join WhatsApp Community
+    </a>
+  </div>
+</div>
+
+<!-- ─────────── TOAST ─────────── -->
+<div id="toast">✅ Copied!</div>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+  // ── State ──
+  let files = [];
+  let videoURLs = [];
+  let results = {};
+  let activeIdx = 0;
+  let isAnalyzing = false;
+  let apiKey = localStorage.getItem('hookgen_api_key') || '';
+
+  // ── Init ──
+  window.addEventListener('DOMContentLoaded', () => {
+    updateKeyStatus();
+    renderUI();
+    document.getElementById('fileInput').addEventListener('change', e => handleFiles(Array.from(e.target.files)));
+  });
+
+  function updateKeyStatus() {
+    const configured = !!apiKey;
+    const badge = document.getElementById('keyStatusBadge');
+    badge.textContent = configured ? '✅ Key saved' : '⚠️ Not set';
+    badge.className = 'key-status ' + (configured ? 'ok' : 'bad');
+    if (document.getElementById('apiKeyInput')) {
+      document.getElementById('apiKeyInput').value = apiKey;
+    }
+    // Banner
+    const banner = document.getElementById('apiBanner');
+    banner.classList.toggle('visible', !configured);
+  }
+
+  // ── Dropzone handlers ──
+  function handleDropzoneClick() {
+    if (!apiKey) { openSettings(); return; }
+    document.getElementById('fileInput').click();
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    if (!apiKey) return;
+    document.getElementById('dropzone').classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    document.getElementById('dropzone').classList.remove('drag-over');
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropzone').classList.remove('drag-over');
+    if (!apiKey) { openSettings(); return; }
+    const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/'));
+    handleFiles(dropped);
+  }
+
+  function handleFiles(newFiles) {
+    if (newFiles.length === 0) return;
+    const combined = [...files, ...newFiles].slice(0, 10);
+    const oversized = combined.find(f => f.size > 50 * 1024 * 1024);
+    if (oversized) { showToast('❌ File too large! Max 50MB per video.'); return; }
+    // Revoke old URLs
+    videoURLs.forEach(u => URL.revokeObjectURL(u));
+    files = combined;
+    videoURLs = files.map(f => URL.createObjectURL(f));
+    activeIdx = 0;
+    renderUI();
+  }
+
+  function renderUI() {
+    const hasFiles = files.length > 0;
+    const configured = !!apiKey;
+
+    // Dropzone visibility
+    document.getElementById('dropzone').style.display = hasFiles ? 'none' : 'flex';
+    document.getElementById('previewSection').style.display = hasFiles ? 'block' : 'none';
+
+    // Key required state inside dropzone
+    document.getElementById('keyRequired').style.display = (!configured && !hasFiles) ? 'flex' : 'none';
+    document.getElementById('dropNormal').style.display = (configured && !hasFiles) ? 'block' : 'none';
+
+    // Dropzone locked style
+    if (!configured) {
+      document.getElementById('dropzone').classList.add('locked');
+    } else {
+      document.getElementById('dropzone').classList.remove('locked');
+    }
+
+    // Video preview
+    if (hasFiles) {
+      document.getElementById('mainVideo').src = videoURLs[activeIdx];
+      renderThumbs();
+    }
+
+    // Analyze button
+    const btn = document.getElementById('analyzeBtn');
+    const allAnalyzed = files.length > 0 && Object.keys(results).length >= files.length;
+    const shouldShow = hasFiles && !allAnalyzed && !isAnalyzing;
+    btn.style.display = shouldShow ? 'flex' : 'none';
+    document.getElementById('analyzeBtnText').textContent = `Analyze ${files.length} Video${files.length > 1 ? 's' : ''}`;
+
+    // Video counter
+    const counter = document.getElementById('videoCounter');
+    counter.textContent = files.length > 1 ? `(${activeIdx + 1}/${files.length})` : '';
+
+    // Results panel
+    renderResults();
+  }
+
+  function renderThumbs() {
+    const wrap = document.getElementById('thumbsWrap');
+    wrap.innerHTML = '';
+    files.forEach((_, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'thumb-btn' + (i === activeIdx ? ' active' : '');
+      btn.innerHTML = `<video src="${videoURLs[i]}" muted preload="metadata"></video>`;
+      btn.onclick = () => { activeIdx = i; renderUI(); };
+      wrap.appendChild(btn);
+    });
+    if (files.length < 10) {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'thumb-add';
+      addBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      addBtn.onclick = () => document.getElementById('fileInput').click();
+      wrap.appendChild(addBtn);
+    }
+  }
+
+  function renderResults() {
+    const empty = document.getElementById('emptyState');
+    const loading = document.getElementById('loadingState');
+    const error = document.getElementById('errorState');
+    const content = document.getElementById('resultContent');
+
+    empty.style.display = 'none';
+    loading.style.display = 'none';
+    error.style.display = 'none';
+    content.style.display = 'none';
+    document.getElementById('analyzingBadge').classList.remove('visible');
+
+    if (files.length === 0) {
+      empty.style.display = 'flex';
+    } else if (isAnalyzing && !results[activeIdx]) {
+      loading.style.display = 'flex';
+      document.getElementById('loadingText').textContent = `Gemini is watching video #${activeIdx + 1}…`;
+      document.getElementById('analyzingBadge').classList.add('visible');
+    } else if (results[activeIdx]) {
+      content.style.display = 'block';
+      renderResultContent(results[activeIdx]);
+    } else if (!isAnalyzing && document.getElementById('errorMsg').textContent) {
+      // show error only if not analyzing
+    } else {
+      empty.style.display = 'flex';
+    }
+  }
+
+  function renderResultContent(data) {
+    // Captions
+    const cl = document.getElementById('captionsList');
+    cl.innerHTML = '';
+    (data.titles || []).forEach((title, i) => {
+      const id = `cap-${activeIdx}-${i}`;
+      const div = document.createElement('div');
+      div.className = 'caption-item';
+      div.style.animationDelay = (i * 0.08) + 's';
+      div.innerHTML = `
+        <div style="padding-right:4px;">${escapeHtml(title)}</div>
+        <button class="copy-btn" id="${id}" onclick="copyText('${escapeJs(title)}', '${id}')" title="Copy caption">
+          <svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>`;
+      cl.appendChild(div);
+    });
+
+    // Hashtags
+    const hl = document.getElementById('hashtagsList');
+    hl.innerHTML = '';
+    (data.hashtags || []).forEach((tag, i) => {
+      const span = document.createElement('span');
+      span.className = 'hashtag';
+      span.style.animationDelay = (i * 0.06) + 's';
+      span.textContent = '#' + tag.replace(/^#/, '');
+      hl.appendChild(span);
+    });
+  }
+
+  // ── Analyze ──
+  async function analyzeVideos() {
+    if (files.length === 0 || isAnalyzing) return;
+    if (!apiKey) { openSettings(); return; }
+
+    isAnalyzing = true;
+    document.getElementById('analyzeBtn').style.display = 'none';
+    document.getElementById('errorState').style.display = 'none';
+    document.getElementById('errorMsg').textContent = '';
+    renderUI();
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        if (results[i]) continue;
+        activeIdx = i;
+        renderUI();
+
+        const base64 = await fileToBase64(files[i]);
+        const result = await callGemini(base64, files[i].type);
+        results[i] = result;
+        renderUI();
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById('errorMsg').textContent = err.message || 'Analysis failed. Please try again.';
+      document.getElementById('errorState').style.display = 'flex';
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('analyzingBadge').classList.remove('visible');
+    } finally {
+      isAnalyzing = false;
+      renderUI();
+    }
+  }
+
+  async function callGemini(base64Data, mimeType) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const body = {
+      contents: [{
+        parts: [
+          { inline_data: { mime_type: mimeType, data: base64Data } },
+          { text: `Analyze this video and provide exactly 5 catchy, high-engagement 'hook' captions/titles that would grab attention on social media platforms like Instagram, TikTok, and YouTube Shorts. Also provide exactly 5 relevant trending hashtags. Return ONLY valid JSON in this exact format: {"titles": ["caption1","caption2","caption3","caption4","caption5"], "hashtags": ["tag1","tag2","tag3","tag4","tag5"]}` }
+        ]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.9,
+        maxOutputTokens: 1024
+      }
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      const msg = errData?.error?.message || `API Error ${resp.status}`;
+      if (resp.status === 400 && msg.includes('API_KEY')) throw new Error('Invalid API Key. Please check your key in Settings.');
+      if (resp.status === 403) throw new Error('API Key unauthorized. Please verify your Gemini API key.');
+      if (resp.status === 429) throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      throw new Error(msg);
+    }
+
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    
+    try {
+      // Clean JSON (remove markdown code blocks if any)
+      const clean = text.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+      return JSON.parse(clean);
+    } catch {
+      return { titles: ['Hook caption 1','Hook caption 2','Hook caption 3','Hook caption 4','Hook caption 5'], hashtags: ['viral','trending','fyp','reels','content'] };
+    }
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ── Reset ──
+  function resetAll() {
+    videoURLs.forEach(u => URL.revokeObjectURL(u));
+    files = []; videoURLs = []; results = {}; activeIdx = 0; isAnalyzing = false;
+    document.getElementById('errorMsg').textContent = '';
+    document.getElementById('fileInput').value = '';
+    renderUI();
+  }
+
+  // ── Copy ──
+  function copyText(text, btnId) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" style="color:var(--emerald)"><polyline points="20 6 9 17 4 12"/></svg>`;
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+      showToast('✅ Caption copied!');
+    });
+  }
+
+  function copyAllHashtags() {
+    const data = results[activeIdx];
+    if (!data) return;
+    const text = (data.hashtags || []).map(t => '#' + t.replace(/^#/, '')).join(' ');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyAllBtn');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" style="color:var(--emerald)"><polyline points="20 6 9 17 4 12"/></svg> Copied All!`;
+      setTimeout(() => {
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy All Hashtags`;
+      }, 2000);
+      showToast('✅ All hashtags copied!');
+    });
+  }
+
+  // ── Settings ──
+  function openSettings() {
+    document.getElementById('apiKeyInput').value = apiKey;
+    updateKeyStatus();
+    document.getElementById('settingsModal').classList.add('open');
+  }
+  function saveSettings(e) {
+    e.preventDefault();
+    apiKey = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('hookgen_api_key', apiKey);
+    updateKeyStatus();
+    closeModal('settingsModal');
+    renderUI();
+    if (apiKey) showToast('✅ API Key saved!');
+  }
+  function toggleKeyVisibility() {
+    const inp = document.getElementById('apiKeyInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  // ── About ──
+  function openAbout() { document.getElementById('aboutModal').classList.add('open'); }
+
+  // ── Modal ──
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.addEventListener('click', e => {
+    if (e.target.classList.contains('modal-backdrop')) {
+      e.target.classList.remove('open');
+    }
+  });
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── Helpers ──
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escapeJs(str) {
+    return str.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+  }
+</script>
+</body>
+</html>
